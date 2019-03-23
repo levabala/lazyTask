@@ -1,0 +1,19 @@
+{
+  "extends": ["tslint:recommended", "tslint-config-prettier"],
+  "linterOptions": {
+    "exclude": ["node_modules/**/*.ts"]
+  },
+  "defaultSeverity": "error",
+  "rules": {
+    "no-console": false,
+    "curly": [true, "as-needed"],
+    "no-debugger": false,
+    "jsx-boolean-value": false
+  },
+  "jsRules": {
+    "no-console": false,
+    "curly": [true, "as-needed"],
+    "no-debugger": false,
+    "jsx-boolean-value": false
+  }
+}
