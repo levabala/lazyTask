@@ -1,9 +1,7 @@
 import { LazyTask } from './LazyTask';
-import { LazyTaskManager } from './LazyTaskManager';
+import LazyTaskManager from './LazyTaskManager';
 
-const lazyTaskManager = new LazyTaskManager();
-
-lazyTaskManager.launch();
+LazyTaskManager.launch();
 
 // task test
 const mediumFunc = () => {
@@ -21,14 +19,14 @@ const hardFunc = () => {
 };
 
 for (let i = 0; i < 3000; i++)
-  lazyTaskManager.addTask(new LazyTask(mediumFunc));
+  LazyTaskManager.addTask(new LazyTask(mediumFunc));
 
 // fps meter
 const textBoxFps = document.getElementById("textBoxFps") as HTMLInputElement;
 const durationHistory: number[] = [];
 let absMax = 0;
 setInterval(() => {
-  durationHistory.push(lazyTaskManager.lastTickDuration);
+  durationHistory.push(LazyTaskManager.lastTickDuration);
   if (durationHistory.length > 15) durationHistory.shift();
 
   const average =
