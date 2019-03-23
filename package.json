@@ -1,7 +1,7 @@
 {
   "name": "@levabala/lazytask",
   "version": "0.0.6",
-  "main": "src/index.ts",
+  "main": "dist/main.bundle.js",
   "scripts": {
     "start": "webpack-dev-server --port 9000 --inline --progress --profile --colors --watch --content-base src/ --mode development",
     "build": "webpack --config webpack.config.js --mode production",
@@ -16,6 +16,7 @@
   "author": "levabala",
   "license": "ISC",
   "files": [
+    "dist/*",
     "src/*.ts"
   ],
   "devDependencies": {
