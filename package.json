@@ -1,6 +1,6 @@
 {
   "name": "@levabala/lazytask",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "src/index.ts",
   "scripts": {
     "start": "webpack-dev-server --port 9000 --inline --progress --profile --colors --watch --content-base src/ --mode development",
