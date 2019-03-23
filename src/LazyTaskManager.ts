@@ -1,6 +1,6 @@
 import { LazyTask } from './LazyTask';
 
-export class LazyTaskManager {
+class LazyTaskManager {
   public lastTickDuration: number = 0;
   private taskStack: LazyTask[] = [];
   private lastTimeStamp?: number = undefined;
@@ -45,3 +45,6 @@ export class LazyTaskManager {
     requestAnimationFrame(this.tick);
   };
 }
+
+const lazyTaskManager = new LazyTaskManager();
+export default lazyTaskManager;
