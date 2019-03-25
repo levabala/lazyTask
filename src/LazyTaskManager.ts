@@ -2,12 +2,15 @@ import { LazyTask } from './LazyTask';
 
 class LazyTaskManager {
   public lastTickDuration: number = 0;
-  private taskStack: LazyTask[] = [];
-  private lastTimeStamp?: number = undefined;
-  private lastStartTimeStamp?: number = undefined;
-  private tickLimit: number = 20;
+  public taskStack: LazyTask[] = [];
+  public lastTimeStamp?: number = undefined;
+  public lastStartTimeStamp?: number = undefined;
+  public tickLimit: number;
+  public tasksPerformedLastTick: number = 0;
 
-  public launch() {
+  public launch(tickLimit = 30) {
+    this.tickLimit = tickLimit;
+
     requestAnimationFrame(this.tick);
   }
 
@@ -23,6 +26,8 @@ class LazyTaskManager {
 
   private tick = () => {
     const startTickTime = Date.now();
+    requestAnimationFrame(this.tick);
+
     this.lastTimeStamp = this.lastTimeStamp || startTickTime;
     this.lastStartTimeStamp = this.lastStartTimeStamp || startTickTime;
 
@@ -30,19 +35,21 @@ class LazyTaskManager {
     this.lastTickDuration = delta;
 
     let counter = 0;
+    let lastTask;
     while (
       Date.now() - this.lastTimeStamp < this.tickLimit &&
-      this.taskStack.length
+      this.taskStack.length &&
+      (!lastTask || !lastTask.onePerTick)
     ) {
-      this.executeTask(this.taskStack.pop() as LazyTask);
+      lastTask = this.taskStack.shift() as LazyTask;
+      this.executeTask(lastTask);
       counter++;
     }
-    console.log(`${counter} tasks per tick`);
+
+    this.tasksPerformedLastTick = counter;
 
     this.lastStartTimeStamp = startTickTime;
     this.lastTimeStamp = Date.now();
-
-    requestAnimationFrame(this.tick);
   };
 }
 

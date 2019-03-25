@@ -13,7 +13,6 @@
       "esnext.asynciterable"
     ],
     "sourceMap": true,
-    "allowJs": true,
     "jsx": "react",
     "moduleResolution": "node",
     "rootDir": "src",
@@ -24,7 +23,8 @@
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "declaration": true
   },
   "exclude": [
     ".nyc_outpu",
@@ -33,6 +33,8 @@
     "karma.config.js",
     "spec.bundle.js",
     "webpack.config.js",
-    "webpack-test.config.js"
+    "webpack-test.config.js",
+    "build",
+    "tsconfig.json"
   ]
 }
