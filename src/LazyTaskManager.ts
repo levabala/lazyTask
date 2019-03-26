@@ -15,6 +15,8 @@ class LazyTaskManager {
   }
 
   public addTask(task: LazyTask) {
+    if (!(task.prority in this.taskStacks)) this.taskStacks[task.prority] = [];
+
     this.taskStacks[task.prority].push(task);
 
     return this;
