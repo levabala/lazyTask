@@ -2,7 +2,7 @@ import { LazyTask } from './LazyTask';
 
 class LazyTaskManager {
   public lastTickDuration: number = 0;
-  public taskStack: LazyTask[] = [];
+  public taskStacks: LazyTask[][] = [[]];
   public lastTimeStamp?: number = undefined;
   public lastStartTimeStamp?: number = undefined;
   public tickLimit: number;
@@ -15,13 +15,22 @@ class LazyTaskManager {
   }
 
   public addTask(task: LazyTask) {
-    this.taskStack.push(task);
+    this.taskStacks[task.prority].push(task);
 
     return this;
   }
 
   private executeTask(task: LazyTask) {
     task.func();
+  }
+
+  private getHighestStack() {
+    for (let i = this.taskStacks.length - 1; i >= 0; i--) {
+      const stack = this.taskStacks[i];
+      if (stack.length) return stack;
+    }
+
+    return this.taskStacks[0];
   }
 
   private tick = () => {
@@ -35,14 +44,17 @@ class LazyTaskManager {
     this.lastTickDuration = delta;
 
     let counter = 0;
+    let currentStack = this.getHighestStack();
     let lastTask;
     while (
       Date.now() - this.lastTimeStamp < this.tickLimit &&
-      this.taskStack.length &&
+      currentStack.length &&
       (!lastTask || !lastTask.onePerTick)
     ) {
-      lastTask = this.taskStack.shift() as LazyTask;
+      lastTask = currentStack.shift() as LazyTask;
       this.executeTask(lastTask);
+
+      if (!currentStack.length) currentStack = this.getHighestStack();
       counter++;
     }
 
