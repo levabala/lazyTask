@@ -3,6 +3,7 @@ import { LazyTask } from './LazyTask';
 class LazyTaskManager {
   public lastTickDuration: number = 0;
   public taskStacks: LazyTask[][] = [[]];
+  public tasksSuspended: LazyTask[] = [];
   public lastTimeStamp?: number = undefined;
   public lastStartTimeStamp?: number = undefined;
   public tickLimit: number;
@@ -29,7 +30,8 @@ class LazyTaskManager {
   private getHighestStack() {
     for (let i = this.taskStacks.length - 1; i >= 0; i--) {
       const stack = this.taskStacks[i];
-      if (stack.length) return stack;
+      if (stack.length && stack.some(task => task.readyToBeExecuted()))
+        return stack;
     }
 
     return this.taskStacks[0];
@@ -45,20 +47,31 @@ class LazyTaskManager {
     const delta = startTickTime - this.lastStartTimeStamp;
     this.lastTickDuration = delta;
 
+    const newSuspended = [];
+
     let counter = 0;
     let currentStack = this.getHighestStack();
     let lastTask;
     while (
       Date.now() - this.lastTimeStamp < this.tickLimit &&
-      currentStack.length &&
+      (this.tasksSuspended.length || currentStack.length) &&
       (!lastTask || !lastTask.onePerTick)
     ) {
-      lastTask = currentStack.shift() as LazyTask;
+      lastTask =
+        this.tasksSuspended.pop() || (currentStack.shift() as LazyTask);
+
+      if (!lastTask.readyToBeExecuted()) {
+        newSuspended.push(lastTask);
+        continue;
+      }
+
       this.executeTask(lastTask);
 
       if (!currentStack.length) currentStack = this.getHighestStack();
       counter++;
     }
+
+    this.tasksSuspended = this.tasksSuspended.reverse().concat(newSuspended);
 
     this.tasksPerformedLastTick = counter;
 
