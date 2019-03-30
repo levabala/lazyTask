@@ -30,8 +30,7 @@ class LazyTaskManager {
   private getHighestStack() {
     for (let i = this.taskStacks.length - 1; i >= 0; i--) {
       const stack = this.taskStacks[i];
-      if (stack.length && stack.some(task => task.readyToBeExecuted()))
-        return stack;
+      if (stack && stack.length) return stack;
     }
 
     return this.taskStacks[0];
@@ -46,32 +45,46 @@ class LazyTaskManager {
 
     const delta = startTickTime - this.lastStartTimeStamp;
     this.lastTickDuration = delta;
-
     const newSuspended = [];
 
     let counter = 0;
     let currentStack = this.getHighestStack();
     let lastTask;
-    while (
-      Date.now() - this.lastTimeStamp < this.tickLimit &&
-      (this.tasksSuspended.length || currentStack.length) &&
-      (!lastTask || !lastTask.onePerTick)
-    ) {
-      lastTask =
-        this.tasksSuspended.pop() || (currentStack.shift() as LazyTask);
+    while (Date.now() - this.lastTimeStamp < this.tickLimit) {
+      if (currentStack.length) {
+        lastTask = currentStack.shift() as LazyTask;
 
-      if (!lastTask.readyToBeExecuted()) {
-        newSuspended.push(lastTask);
+        if (!lastTask.readyToBeExecuted()) {
+          newSuspended.push(lastTask);
+          continue;
+        }
+
+        this.executeTask(lastTask);
+        counter++;
+
+        if (!currentStack.length) currentStack = this.getHighestStack();
+
         continue;
       }
 
-      this.executeTask(lastTask);
+      if (this.tasksSuspended.length) {
+        for (let i = this.tasksSuspended.length - 1; i >= 0; i--)
+          if (this.tasksSuspended[i].readyToBeExecuted()) {
+            const task = this.tasksSuspended.splice(i, 1)[0];
+            this.executeTask(task);
+            counter++;
 
-      if (!currentStack.length) currentStack = this.getHighestStack();
-      counter++;
+            break;
+          }
+
+        continue;
+      }
+
+      // if both stacks are empty
+      break;
     }
 
-    this.tasksSuspended = this.tasksSuspended.reverse().concat(newSuspended);
+    this.tasksSuspended = this.tasksSuspended.concat(newSuspended);
 
     this.tasksPerformedLastTick = counter;
 
