@@ -1,6 +1,8 @@
 import { LazyTask } from './LazyTask';
 
 class LazyTaskManager {
+  public durationHistoryMaxLength = 15;
+  public durationHistory: number[] = [];
   public lastTickDuration: number = 0;
   public taskStacks: LazyTask[][] = [[]];
   public tasksSuspended: LazyTask[] = [];
@@ -15,16 +17,16 @@ class LazyTaskManager {
     requestAnimationFrame(this.tick);
   }
 
-  public addTask(task: LazyTask) {
+  public async addTask(task: LazyTask): Promise<LazyTask> {
     if (!(task.prority in this.taskStacks)) this.taskStacks[task.prority] = [];
 
     this.taskStacks[task.prority].push(task);
 
-    return this;
+    return await task;
   }
 
-  private executeTask(task: LazyTask) {
-    task.func();
+  private async executeTask(task: LazyTask) {
+    return await task.execute();
   }
 
   private getHighestStack() {
@@ -45,6 +47,11 @@ class LazyTaskManager {
 
     const delta = startTickTime - this.lastStartTimeStamp;
     this.lastTickDuration = delta;
+    this.durationHistory.push(delta);
+
+    if (this.durationHistory.length > this.durationHistoryMaxLength)
+      this.durationHistory.shift();
+
     const newSuspended = [];
 
     let counter = 0;
