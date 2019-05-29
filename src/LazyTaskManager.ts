@@ -9,20 +9,84 @@ class LazyTaskManager {
   public lastTimeStamp?: number = undefined;
   public lastStartTimeStamp?: number = undefined;
   public tickLimit: number;
+  public destructCheckBlockSize: number;
   public tasksPerformedLastTick: number = 0;
+  public tasksDestructed: number = 0;
+  public tasksCounter = 0;
 
-  public launch(tickLimit = 30) {
+  public launch(
+    tickLimit = 30,
+    destructCheckInterval = 1000,
+    destructCheckBlockSize = 100
+  ) {
     this.tickLimit = tickLimit;
+    this.destructCheckBlockSize = destructCheckBlockSize;
 
     requestAnimationFrame(this.tick);
+
+    const tryToDestructPeriodically = async () => {
+      await this.tryToDestructTasks();
+      setTimeout(() => tryToDestructPeriodically(), destructCheckInterval);
+    };
+
+    tryToDestructPeriodically();
   }
 
-  public async addTask(task: LazyTask): Promise<LazyTask> {
+  public async tryToDestructTasks() {
+    (() => {
+      let lastCheckedIndex = 0;
+      const taskIdsToDestruct: number[] = [];
+      const blocksCount = Math.floor(
+        this.tasksSuspended.length / this.destructCheckBlockSize
+      );
+
+      const blockTasks = new Array(blocksCount).fill(null).map(
+        () =>
+          new LazyTask(() => {
+            let left = this.destructCheckBlockSize;
+            while (
+              lastCheckedIndex < this.tasksSuspended.length - 1 &&
+              --left > 0
+            ) {
+              const nowCheckIndex = ++lastCheckedIndex;
+              const task = this.tasksSuspended[nowCheckIndex];
+              if (task.shouldBeDestructed()) taskIdsToDestruct.push(task.id);
+            }
+
+            // console.log("assume ids to destruct");
+          })
+      );
+
+      const finalTask = new LazyTask(() => {
+        const newSuspended = this.tasksSuspended.filter(
+          task => !taskIdsToDestruct.includes(task.id)
+        );
+        this.tasksSuspended = newSuspended;
+        this.tasksDestructed += taskIdsToDestruct.length;
+
+        // console.log("do destruction");
+      });
+
+      const allTasksToDo = [finalTask, ...blockTasks];
+      allTasksToDo.forEach(task => this.addTask(task));
+    })();
+  }
+
+  public async addFunc(func: () => any, firstInStack = false): Promise<any> {
+    const task = new LazyTask(func);
+    await this.addTask(task, firstInStack);
+  }
+
+  public async addTask(task: LazyTask, firstInStack = false): Promise<any> {
     if (!(task.prority in this.taskStacks)) this.taskStacks[task.prority] = [];
 
-    this.taskStacks[task.prority].push(task);
+    task.setId(this.tasksCounter++);
+    if (firstInStack) this.taskStacks[task.prority].unshift(task);
+    else this.taskStacks[task.prority].push(task);
 
-    return await task;
+    return new Promise(resolve => {
+      task.then(result => resolve(result));
+    });
   }
 
   private async executeTask(task: LazyTask) {
@@ -39,6 +103,8 @@ class LazyTaskManager {
   }
 
   private tick = () => {
+    // performance.mark("lazytick-start");
+
     const startTickTime = Date.now();
     requestAnimationFrame(this.tick);
 
@@ -57,9 +123,11 @@ class LazyTaskManager {
     let counter = 0;
     let currentStack = this.getHighestStack();
     let lastTask;
+
+    // performance.mark("lazytick-while-start");
     while (Date.now() - this.lastTimeStamp < this.tickLimit) {
       if (currentStack.length) {
-        lastTask = currentStack.shift() as LazyTask;
+        lastTask = currentStack.pop() as LazyTask;
 
         if (!lastTask.readyToBeExecuted()) {
           newSuspended.push(lastTask);
@@ -75,21 +143,26 @@ class LazyTaskManager {
       }
 
       if (this.tasksSuspended.length) {
-        for (let i = this.tasksSuspended.length - 1; i >= 0; i--)
+        let wasSmthExecuted = false;
+        // for (let i = this.tasksSuspended.length - 1; i >= 0; i--)
+        for (let i = 0; i < this.tasksSuspended.length; i++)
           if (this.tasksSuspended[i].readyToBeExecuted()) {
             const task = this.tasksSuspended.splice(i, 1)[0];
             this.executeTask(task);
             counter++;
 
+            wasSmthExecuted = true;
+
             break;
           }
 
-        continue;
+        if (wasSmthExecuted) continue;
       }
 
       // if both stacks are empty
       break;
     }
+    // performance.mark("lazytick-while-end");
 
     this.tasksSuspended = this.tasksSuspended.concat(newSuspended);
 
@@ -97,6 +170,14 @@ class LazyTaskManager {
 
     this.lastStartTimeStamp = startTickTime;
     this.lastTimeStamp = Date.now();
+
+    // performance.mark("lazytick-end");
+    // performance.measure("lazytick", "lazytick-start", "lazytick-end");
+    // performance.measure(
+    //   "lazytick-while",
+    //   "lazytick-while-start",
+    //   "lazytick-while-end"
+    // );
   };
 }
 
