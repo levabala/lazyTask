@@ -16,7 +16,7 @@
   "author": "levabala",
   "license": "ISC",
   "files": [
-    "dist/*",
+    "build/dist/*",
     "src/*.ts"
   ],
   "devDependencies": {
