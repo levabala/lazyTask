@@ -5,21 +5,31 @@ export class LazyTask {
   public condition: (() => boolean) | null;
   public destructer: (() => boolean) | null;
   public id: number = 0;
+  public name: string;
 
   public callbacks: Array<(result: any) => any> = [];
 
-  constructor(
-    func: () => any,
-    priority = 0,
-    condition: (() => boolean) | null = null,
-    destructer: (() => boolean) | null = null,
-    onePerTick = false
-  ) {
+  constructor({
+    func,
+    taskName,
+    priority,
+    condition,
+    destructer,
+    onePerTick
+  }: {
+    func: () => any;
+    taskName?: string;
+    priority?: number;
+    condition?: (() => boolean) | null;
+    destructer?: (() => boolean) | null;
+    onePerTick?: boolean;
+  }) {
     this.func = func;
-    this.onePerTick = onePerTick;
-    this.prority = priority;
-    this.condition = condition;
-    this.destructer = destructer;
+    this.name = taskName || "unnamed";
+    this.onePerTick = onePerTick || false;
+    this.prority = priority || 0;
+    this.condition = condition || null;
+    this.destructer = destructer || null;
   }
 
   public setId(id: number) {

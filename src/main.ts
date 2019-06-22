@@ -1,5 +1,5 @@
-import { LazyTask } from './LazyTask';
-import LazyTaskManager from './LazyTaskManager';
+import { LazyTask } from "./LazyTask";
+import LazyTaskManager from "./LazyTaskManager";
 
 LazyTaskManager.launch();
 
@@ -19,7 +19,7 @@ const hardFunc = () => {
 };
 
 for (let i = 0; i < 3000; i++)
-  LazyTaskManager.addTask(new LazyTask(mediumFunc));
+  LazyTaskManager.addTask(new LazyTask({ func: mediumFunc }));
 
 // fps meter
 const textBoxFps = document.getElementById("textBoxFps") as HTMLInputElement;

@@ -1,4 +1,10 @@
-import { LazyTask } from './LazyTask';
+import { LazyTask } from "./LazyTask";
+
+const requestTickCallback =
+  // (window as any).requestIdleCallback || window.requestAnimationFrame;
+  window.requestAnimationFrame;
+
+// console.log(requestTickCallback);
 
 class LazyTaskManager {
   public durationHistoryMaxLength = 15;
@@ -14,6 +20,8 @@ class LazyTaskManager {
   public tasksDestructed: number = 0;
   public tasksCounter = 0;
 
+  public tasksExecuted: { [taskName: string]: number } = {};
+
   public launch(
     tickLimit = 30,
     destructCheckInterval = 1000,
@@ -22,7 +30,7 @@ class LazyTaskManager {
     this.tickLimit = tickLimit;
     this.destructCheckBlockSize = destructCheckBlockSize;
 
-    requestAnimationFrame(this.tick);
+    requestTickCallback(this.tick);
 
     const tryToDestructPeriodically = async () => {
       await this.tryToDestructTasks();
@@ -42,29 +50,33 @@ class LazyTaskManager {
 
       const blockTasks = new Array(blocksCount).fill(null).map(
         () =>
-          new LazyTask(() => {
-            let left = this.destructCheckBlockSize;
-            while (
-              lastCheckedIndex < this.tasksSuspended.length - 1 &&
-              --left > 0
-            ) {
-              const nowCheckIndex = ++lastCheckedIndex;
-              const task = this.tasksSuspended[nowCheckIndex];
-              if (task.shouldBeDestructed()) taskIdsToDestruct.push(task.id);
+          new LazyTask({
+            func: () => {
+              let left = this.destructCheckBlockSize;
+              while (
+                lastCheckedIndex < this.tasksSuspended.length - 1 &&
+                --left > 0
+              ) {
+                const nowCheckIndex = ++lastCheckedIndex;
+                const task = this.tasksSuspended[nowCheckIndex];
+                if (task.shouldBeDestructed()) taskIdsToDestruct.push(task.id);
+              }
             }
 
             // console.log("assume ids to destruct");
           })
       );
 
-      const finalTask = new LazyTask(() => {
-        const newSuspended = this.tasksSuspended.filter(
-          task => !taskIdsToDestruct.includes(task.id)
-        );
-        this.tasksSuspended = newSuspended;
-        this.tasksDestructed += taskIdsToDestruct.length;
+      const finalTask = new LazyTask({
+        func: () => {
+          const newSuspended = this.tasksSuspended.filter(
+            task => !taskIdsToDestruct.includes(task.id)
+          );
+          this.tasksSuspended = newSuspended;
+          this.tasksDestructed += taskIdsToDestruct.length;
 
-        // console.log("do destruction");
+          // console.log("do destruction");
+        }
       });
 
       const allTasksToDo = [finalTask, ...blockTasks];
@@ -72,13 +84,31 @@ class LazyTaskManager {
     })();
   }
 
+  public printStats() {
+    const maxLeft = Object.keys(this.tasksExecuted).reduce((acc, val) =>
+      acc.length > val.length ? acc : val
+    );
+
+    console.log(
+      Object.entries(this.tasksExecuted)
+        .map(
+          ([taskName, executes]) =>
+            `${taskName.padEnd(maxLeft.length)}: ${executes}`
+        )
+        .join("\n")
+    );
+  }
+
   public async addFunc(func: () => any, firstInStack = false): Promise<any> {
-    const task = new LazyTask(func);
+    const task = new LazyTask({ func });
     await this.addTask(task, firstInStack);
   }
 
   public async addTask(task: LazyTask, firstInStack = false): Promise<any> {
     if (!(task.prority in this.taskStacks)) this.taskStacks[task.prority] = [];
+
+    if (!(task.name in this.tasksExecuted)) this.tasksExecuted[task.name] = 1;
+    else this.tasksExecuted[task.name]++;
 
     task.setId(this.tasksCounter++);
     if (firstInStack) this.taskStacks[task.prority].unshift(task);
@@ -106,7 +136,7 @@ class LazyTaskManager {
     // performance.mark("lazytick-start");
 
     const startTickTime = Date.now();
-    requestAnimationFrame(this.tick);
+    requestTickCallback(this.tick);
 
     this.lastTimeStamp = this.lastTimeStamp || startTickTime;
     this.lastStartTimeStamp = this.lastStartTimeStamp || startTickTime;
